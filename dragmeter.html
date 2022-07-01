@@ -2,9 +2,11 @@
 
 <!--
   todo:
-  - space: commit response
-  - backspace: go back (only within block)
-  - enter: download data
+  - create / update local storage every time data is logged
+  - check for local storage on mount
+  - nuke storage when task completes
+
+  - add trial condition input capability (just to output to log)
 -->
 
 <html>
@@ -48,23 +50,99 @@
         color: #FF00FF;
         margin: auto;
       }
+      .help{
+        position: absolute;
+        color: #33F3EF;
+        padding: 20px;
+        top: 0;
+        left: 0;
+        font-size: 12pt;
+        transtion: opacity 2s ease;
+      }
+      .v-enter-active,
+      .v-leave-active {
+        transition: opacity 0.5s ease;
+      }
+      .v-enter-from,
+      .v-leave-to {
+        opacity: 0;
+      }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/vue"></script>
   </head>
 
   <body>
     <div id="app">
-      <progress class="bar" max="100" v-bind:value="barValue" v-if="!dead"></progress>
+      <Transition>
+        <progress class="bar" max="100" v-bind:value="barValue" v-if="!dead"></progress>
+      </Transition>
 
-      <div class="IDbox" v-if="!dead">
-        <span style="color:#6F00FF">B{{ block }}</span>
-        <br/>
-        <span style="color:#ED008C">T{{ trial }}</span>
-      </div>
+      <Transition>
+        <div class="IDbox" v-if="!dead & trial!=0">
+          <span style="color:#6F00FF">B{{ block }}</span>
+          <br/>
+          <span style="color:#ED008C">T{{ trial }}</span>
+        </div>
+      </Transition>
 
-      <div class="endMsg" v-if="dead">
-        Task complete!
-      </div>
+      <Transition>
+        <div class="IDbox" v-if="trial==0">
+          <span style="color:#6F00FF; font-size:40pt;">PRAC</span>
+          <br/>
+          <span style="color:#ED008C; font-size:40pt;">TICE</span>
+        </div>
+      </Transition>
+
+      <Transition>
+        <div class="endMsg" v-if="dead">
+          Task complete!
+        </div>
+      </Transition>
+
+      <Transition>
+        <div class="help" v-if="!help">
+          [H]
+        </div>
+      </Transition>
+
+      <Transition>
+        <div class="help" v-if="help">
+          <table>
+            <tr>
+              <td style="text-align:center">🖱️</td>
+              <td>+ Drag</td>
+              <td style="color:#FFFFFF; padding-left:5px">adjust meter</td>
+            </tr>
+            <tr>
+              <td style="text-align:center">[_]</td>
+              <td>Spacebar</td>
+              <td style="color:#FFFFFF; padding-left:5px">confirm response</td>
+            </tr>
+            <tr>
+              <td style="text-align:center">[H]</td>
+              <td>Hold</td>
+              <td style="color:#FFFFFF; padding-left:5px">display this help</td>
+            </tr>
+            <tr>
+              <td>&nbsp;</td>
+            </tr>
+            <tr>
+              <td colspan="3" style="text-align:center">↓↓ Experimenter ↓↓</td>
+            </tr>
+            <tr>
+              <td style="text-align:center;">[⌫]</td>
+              <td>Backspace </td>
+              <td style="color:#FFFFFF; padding-left:5px">go back a trial</td>
+            </tr>
+            <tr>
+              <td style="text-align:center;">[⏎]</td>
+              <td>Enter </td>
+              <td style="color:#FFFFFF; padding-left:5px">save datafile</td>
+            </tr>
+          </table>
+        </div>
+      </Transition>
+
     </div>
 
     <script>
@@ -79,13 +157,14 @@
             endPos: null,
             heightscale: 0,
             block: 1,
-            trial: 1,
+            trial: 0,
             responses: [],
             now: null,
             datestring: "",
             respStartTime: null,
             respClicks: 0,
-            dead: false
+            dead: false,
+            help: true
           }
         },
         computed: {
@@ -95,19 +174,23 @@
           document.addEventListener('mousedown', this.mousedown)
           document.addEventListener('mousemove', this.mousemove)
           document.addEventListener('mouseup', this.mouseup)
+          document.addEventListener('keydown', event => {
+              if (event.code === 'KeyH') {
+                this.help = true
+              }
+            })
           document.addEventListener('keyup', event => {
               if (event.code === 'Space') {
-                this.next(); //whatever you want to do when space is pressed
+                this.next();
               }
-            })
-          document.addEventListener('keyup', event => {
               if (event.code === 'Backspace') {
-                this.back(); //whatever you want to do when space is pressed
+                this.back();
               }
-            })
-          document.addEventListener('keyup', event => {
               if (event.code === 'Enter') {
-                this.download(); //whatever you want to do when space is pressed
+                this.download();
+              }
+              if (event.code === 'KeyH') {
+                this.help = false
               }
             })
           this.heightscale = window.innerHeight / 2
@@ -126,6 +209,7 @@
             }
             if(this.respStartTime == null){
               this.respStartTime = window.performance.now()
+              //this.help = false
             }
           },
           mousemove(ev){
@@ -161,8 +245,11 @@
             return moment - this.respStartTime
           },
           next(){
+            this.help = false
             if(this.respStartTime != null){
-              this.log()
+              if(this.trial != 0){
+                this.log()
+              }
               if(this.trial<10){
                 this.trial += 1;
               }
