@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+
+<!--
+  todo:
+  - space: commit response
+  - backspace: go back (only within block)
+  - enter: download data
+-->
+
+<html>
+  <head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&display=swap" rel="stylesheet">
+    <style>
+      body{
+        background-color: #080008
+      }
+      #app{
+        height: 95vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: 'Roboto Mono',monospace;
+        font-size: 48pt;
+      }
+      .bar{
+        position: absolute;
+        margin: auto;
+        transform: rotate(-90deg);
+        width: 500px;
+        height: 300px;
+        accent-color: #ff00ff;
+      }
+      .IDbox{
+        padding: 20px;
+        width: 120px;
+        background-color: #000000;
+        color: #ff00ff;
+        position: absolute;
+        top: 0;
+        right: 0;
+        user-select: none;
+        text-align: left;
+      }
+      .endMsg{
+        position: absolute;
+        color: #FF00FF;
+        margin: auto;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <progress class="bar" max="100" v-bind:value="barValue" v-if="!dead"></progress>
+
+      <div class="IDbox" v-if="!dead">
+        <span style="color:#6F00FF">B{{ block }}</span>
+        <br/>
+        <span style="color:#ED008C">T{{ trial }}</span>
+      </div>
+
+      <div class="endMsg" v-if="dead">
+        Task complete!
+      </div>
+    </div>
+
+    <script>
+      const { createApp } = Vue
+      createApp({
+        data(){
+          return {
+            barValue: 0.0,
+            done: false,
+            startPos: null,
+            startVal: 0.0,
+            endPos: null,
+            heightscale: 0,
+            block: 1,
+            trial: 1,
+            responses: [],
+            now: null,
+            datestring: "",
+            respStartTime: null,
+            respClicks: 0,
+            dead: false
+          }
+        },
+        computed: {
+
+        },
+        mounted(){
+          document.addEventListener('mousedown', this.mousedown)
+          document.addEventListener('mousemove', this.mousemove)
+          document.addEventListener('mouseup', this.mouseup)
+          document.addEventListener('keyup', event => {
+              if (event.code === 'Space') {
+                this.next(); //whatever you want to do when space is pressed
+              }
+            })
+          document.addEventListener('keyup', event => {
+              if (event.code === 'Backspace') {
+                this.back(); //whatever you want to do when space is pressed
+              }
+            })
+          document.addEventListener('keyup', event => {
+              if (event.code === 'Enter') {
+                this.download(); //whatever you want to do when space is pressed
+              }
+            })
+          this.heightscale = window.innerHeight / 2
+          this.generateDate()
+          console.log(this.datestring)
+        },
+        watch: {
+        },
+        methods: {
+          mousedown(ev){
+            if(this.startPos == null){
+              console.log("startpos:", ev.screenX, ev.screenY)
+              this.startPos = [ev.screenX, ev.screenY]
+              this.startVal = this.barValue
+              this.respClicks += 1
+            }
+            if(this.respStartTime == null){
+              this.respStartTime = window.performance.now()
+            }
+          },
+          mousemove(ev){
+            if(this.startPos != null){
+              console.log(this.heightscale)
+              this.endPos = [ev.screenX, ev.screenY]
+              val = (this.startPos[1] - this.endPos[1]) / this.heightscale * 100
+              val = this.startVal + val
+              val = Math.max(Math.min(val,100),0)
+              this.barValue = val
+            }
+          },
+          mouseup(ev){
+            //abort if didn't move at all
+            //if(!this.done & this.startPos != null & this.endPos != null){
+            console.log("released!")
+            this.startPos = null
+            //}
+          },
+          dist(pos1, pos2){
+            xd = (pos2[0] - pos1[0])
+            yd = (pos2[1] - pos1[1])
+            return Math.sqrt((xd * xd) + (yd * yd))
+          },
+          generateDate(){
+            this.now = new Date()
+            date = [this.now.getFullYear(), this.now.getMonth(), this.now.getDay()]
+            time = [this.now.getHours(), this.now.getMinutes(), this.now.getSeconds(), this.now.getMilliseconds()]
+            this.datestring = date.join("-") + "_" + time.join("-")
+          },
+          getRespTime(){
+            moment = window.performance.now()
+            return moment - this.respStartTime
+          },
+          next(){
+            if(this.respStartTime != null){
+              this.log()
+              if(this.trial<10){
+                this.trial += 1;
+              }
+              else if(this.block < 5){
+                this.trial = 1;
+                this.block += 1;
+              }
+              else{
+                this.download()
+                this.dead = true
+              }
+              this.reset()
+              console.log(this.responses.at(-1))
+            }
+          },
+          back(){
+            if(this.trial > 1){
+              this.trial-=1;
+              this.responses.pop()
+              this.reset()
+            }
+          },
+          log(){
+            this.responses.push([this.block, this.trial, this.barValue, this.respClicks - 1, this.getRespTime()])
+          },
+          getTSV(){
+            outstring = ""
+            header = ["block","trial","response","adjustments","duration"]
+            outstring += header.join("\t") + "\n"
+            for(line of this.responses){
+              outstring += line.join("\t") + "\n"
+            }
+            return outstring
+          },
+          reset(){
+            this.barValue = 0.0
+            this.done = false
+            this.startPos = null
+            this.endPos = null
+            this.startVal = 0.0
+            this.respStartTime = null
+            this.respClicks = 0
+          },
+          download(){
+            filename = this.datestring + ".tsv"
+            text = this.getTSV()
+            var element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+
+            element.style.display = 'none';
+            document.body.appendChild(element);
+
+            element.click();
+
+            document.body.removeChild(element);
+          }
+        }
+      }).mount('#app')
+
+
+    </script>
+
+
+  </body>
+</html>
