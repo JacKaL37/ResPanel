@@ -2,11 +2,17 @@
 
 <!--
   todo:
+
+  session data protection stuff
   - create / update local storage every time data is logged
   - check for local storage on mount
   - nuke storage when task completes
 
+  logging help
   - add trial condition input capability (just to output to log)
+  - id and exp sign in logs / filenames (? url args?)
+  - informed consent page
+  - latin square
 -->
 
 <html>
@@ -67,6 +73,13 @@
       .v-leave-to {
         opacity: 0;
       }
+      .anchor{
+        color:#33F3EF;
+        position:absolute;
+        display: block;
+        margin:0 auto;
+        font-size: 24pt;
+      }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/vue"></script>
   </head>
@@ -111,7 +124,7 @@
             <tr>
               <td style="text-align:center">🖱️</td>
               <td>+ Drag</td>
-              <td style="color:#FFFFFF; padding-left:5px">adjust meter</td>
+              <td style="color:#FFFFFF; padding-left:5px">adjust meter (anywhere)</td>
             </tr>
             <tr>
               <td style="text-align:center">[_]</td>
@@ -143,6 +156,12 @@
         </div>
       </Transition>
 
+      <Transition>
+        <p class="anchor" v-if="help" style="top:20px;">More effort</p>
+      </Transition>
+      <Transition>
+        <p class="anchor" v-if="help" style="bottom:20px;">Less effort</p>
+      </Transition>
     </div>
 
     <script>
@@ -174,25 +193,29 @@
           document.addEventListener('mousedown', this.mousedown)
           document.addEventListener('mousemove', this.mousemove)
           document.addEventListener('mouseup', this.mouseup)
+          document.addEventListener('contextmenu', event => {
+            event.preventDefault()
+            this.next()
+          })
           document.addEventListener('keydown', event => {
-              if (event.code === 'KeyH') {
-                this.help = true
-              }
-            })
+            if (event.code === 'KeyH') {
+              this.help = true
+            }
+          })
           document.addEventListener('keyup', event => {
-              if (event.code === 'Space') {
-                this.next();
-              }
-              if (event.code === 'Backspace') {
-                this.back();
-              }
-              if (event.code === 'Enter') {
-                this.download();
-              }
-              if (event.code === 'KeyH') {
-                this.help = false
-              }
-            })
+            if (event.code === 'Space') {
+              this.next();
+            }
+            if (event.code === 'Backspace') {
+              this.back();
+            }
+            if (event.code === 'Enter') {
+              this.download();
+            }
+            if (event.code === 'KeyH') {
+              this.help = false
+            }
+          })
           this.heightscale = window.innerHeight / 2
           this.generateDate()
           console.log(this.datestring)
