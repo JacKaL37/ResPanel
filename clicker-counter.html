@@ -1,0 +1,93 @@
+<!DOCTYPE HTML>
+<html>
+  
+<head>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <title>clickr</title>
+    <style>
+        body{
+            background-color: #080008
+        }
+        #app{
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 720px;
+            font-family: 'Roboto Mono',monospace;
+        }
+        button{
+            width: 50%;
+            height: 50%;
+            flex-basis: 50%;
+            background-color: #ff00ff;
+            border-radius: 20px;
+        }
+        button:active{
+            background-color: #aa00aa;
+        }
+
+        p{
+            display: flex;
+            flex-basis: 100%;
+        }
+        .break {
+            flex-basis: 100%;
+            height: 0;
+        }
+    </style>
+</head>
+  
+<body>
+    
+    <div id="app">
+
+    <button @click="countIt">clickme!</button>
+    
+    <p>{{ meanTime }}</p>
+    </div>
+    
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+        data() {
+            return {
+                begun: false,
+                message: 'Hello Vue!',
+                relTimes: [],
+                rawTimes: [],
+                startTime: Date.now(),
+                prevClickTime: null
+            }
+        },
+        computed:{
+            meanTime(){
+                var sum = 0;
+                for(i of this.relTimes){
+                    sum += i;
+                }
+                return sum / this.relTimes.length; 
+            }
+        },
+        methods: {
+            countIt(event){
+                
+                var clickTimeRaw = Date.now() - this.startTime;
+                this.rawTimes.push(clickTimeRaw);
+
+                if(this.prevClickTime == null){
+                    this.prevClickTime = clickTimeRaw;
+                }
+                else{
+                    this.relTimes.push(clickTimeRaw - this.prevClickTime);
+                    this.prevClickTime = clickTimeRaw;
+                }
+            }
+        }
+        }).mount('#app')
+    </script>
+</body>
+  
+</html>
